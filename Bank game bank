@@ -1,0 +1,48 @@
+#include <stdio.h> 
+#include <sys/types.h> 
+#include <wait.h> 
+#include <signal.h> 
+#include <time.h>
+#include <stdlib.h>
+
+int sum=100, PT;
+
+void sighandler(int signo, siginfo_t *info,void *ctx) 
+{
+   int proc=info->si_pid;
+system("pidof -s timer > _pid.txt");
+char *pid=(char *)malloc(10);
+FILE *file1 = fopen("_pid.txt", "r");
+fscanf(file1, "%s", pid);
+PT=atoi(pid);
+if (proc==PT)
+sum=1.1*sum;
+else{
+printf("Process %d wants to now how much money he has\n", proc);
+union sigval mysigval;
+    mysigval.sival_int = sum;
+    if(sigqueue(proc,SIGUSR2,mysigval) == -1){
+        perror("sigqueue error");
+        exit(EXIT_FAILURE);
+    }
+}
+}
+
+int main (void) 
+{ 
+printf("I'm the bank\n");       
+struct sigaction act;
+       act.sa_sigaction = sighandler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = SA_SIGINFO; 
+       if (sigaction (SIGUSR1, &act, NULL) == -1) { 
+              fprintf (stderr, "sigaction() error\n"); 
+              return 1; 
+       } 
+if (sigaction (SIGALRM, &act, NULL) == -1) { 
+              fprintf (stderr, "sigaction() error\n"); 
+              return 1; 
+       } 
+       while (1); 
+       return 0; 
+}
