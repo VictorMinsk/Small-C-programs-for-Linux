@@ -1,0 +1,61 @@
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <signal.h> 
+#include <unistd.h>
+
+int P1, P2;
+int sum=0; 
+
+void sighandler(int signo, siginfo_t *info,void *ctx)
+{
+   int proc=info->si_pid;
+int n=info->si_int;
+int playerNum;
+   if (proc==P1){
+playerNum=1;
+sum+=n;}
+else if (proc==P2){
+playerNum=2;
+sum-=n;
+}
+    printf("Player #%d conceived the number %d\n",playerNum, n);
+printf("The sum is %d now\n",sum);
+}
+
+int main (void) 
+{ 
+struct sigaction act;
+    act.sa_sigaction = sighandler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = SA_SIGINFO;
+    if(sigaction(SIGALRM,&act,NULL) == -1){
+        perror("sigaction error");
+        return -1;
+    }
+printf("Let's start the game!\n");
+int i=0;
+system("pidof -s player1 > _pid1.txt");
+system("pidof -s player2 > _pid2.txt");
+char *pid1=(char *)malloc(10);
+FILE *file1 = fopen("_pid1.txt", "r");
+fscanf(file1, "%s", pid1);
+P1=atoi(pid1);
+char *pid2=(char *)malloc(10);
+FILE *file2 = fopen("_pid2.txt", "r");
+fscanf(file2, "%s", pid2);
+P2=atoi(pid2);
+for(i=0;i<20;i++){
+sleep(1);
+union sigval mysigval;
+    mysigval.sival_int = getppid();
+      if (i%2 == 0)
+kill(P1, SIGALRM); 
+       else kill(P2, SIGALRM);
+sleep(1);
+}
+if (sum==0) system("gdialog --infobox \"Oh no! Dead heat!\" 5, 20");
+else if (sum>0) system("gdialog --infobox \"The sum is positive!\n1st Player win!\" 5, 20");
+else  system("gdialog --infobox \"The sum is negative!\n2nd Player win!\" 5, 20");
+printf("The end\n");       
+return 0;
+}
